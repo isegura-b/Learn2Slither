@@ -1,3 +1,5 @@
+from apple import apple_eaten
+
 snake = [
     [5, 5],
     [5, 4],
@@ -5,21 +7,19 @@ snake = [
 ]
 
 direction = "Right"
-def move_snake(new_direction):
+def move_snake(new_direction, apples):
 
     global direction
-
     if direction == "Right" and new_direction == "Left":
-        return
+        return True
     if direction == "Left" and new_direction == "Right":
-        return
+        return True
     if direction == "Up" and new_direction == "Down":
-        return
+        return True
     if direction == "Down" and new_direction == "Up":
-        return
+        return True
 
     direction = new_direction
-
     head = snake[0]
     row = head[0]
     col = head[1]
@@ -35,7 +35,6 @@ def move_snake(new_direction):
         new_row = row - 1
     elif direction == "Down":
         new_row = row + 1
-
     new_head = [new_row, new_col]
 
     if (
@@ -43,12 +42,34 @@ def move_snake(new_direction):
         or new_head[1] <= 0
         or new_head[0] >= 11
         or new_head[1] >= 11
-    ) :
-        print("GameOver")
-        return (False)
+    ):
+        print("Game Over: wall")
+        return False
 
+    for i in range(1, len(snake)):
+
+        if (
+            new_head[0] == snake[i][0]
+            and new_head[1] == snake[i][1]
+        ):
+            print("Game Over: body")
+            return False
+
+    grow = apple_eaten(new_head, apples)
     snake.insert(0, new_head)
-    snake.pop()
+    if grow == 0:
+        snake.pop()
+    elif grow == -1:
+        snake.pop()
+        if len(snake) > 0:
+            snake.pop()
+        if len(snake) == 0:
+            print("Game Over: length 0")
+            return False
+    elif grow == 1:
+        pass
+
+    return True
 
 def reset_snake():
     global direction
@@ -58,5 +79,6 @@ def reset_snake():
     snake.append([5, 5])
     snake.append([5, 4])
     snake.append([5, 3])
+    snake.append([5, 2])
 
     direction = "Right"

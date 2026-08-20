@@ -147,3 +147,41 @@ def draw_rip_snake():
                 fill="white",
                 tags="snake"
             )
+
+def draw_apple(apple, rgb):
+
+    row = apple[0]
+    col = apple[1]
+
+    x1 = col * CELL_SIZE
+    y1 = row * CELL_SIZE
+
+    x2 = x1 + CELL_SIZE
+    y2 = y1 + CELL_SIZE
+
+    if (rgb == "red"):
+        canvas.create_oval(
+            x1 + 20,
+            y1 + 20,
+            x2 - 20,
+            y2 - 20,
+            fill="red",
+            tags="apple"
+        )
+    else:
+        canvas.create_oval(
+            x1 + 20,
+            y1 + 20,
+            x2 - 20,
+            y2 - 20,
+            fill="green",
+            tags="apple"
+        )
+
+
+def draw_apples(apples):
+
+    canvas.delete("apple")
+
+    for apple in apples:
+        draw_apple(apple[0], apple[1])
