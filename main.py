@@ -1,5 +1,6 @@
 from snake import move_snake
 from snake import reset_snake
+from snake import snake
 
 from apple import create_apple
 from apple import apple_eaten
@@ -14,9 +15,9 @@ from display import draw_apples
 alive = True
 
 apples = []
-apples.append(create_apple("green"))
-apples.append(create_apple("green"))
-apples.append(create_apple("red"))
+apples.append(create_apple("green", snake, apples))
+apples.append(create_apple("green", snake, apples))
+apples.append(create_apple("red", snake, apples))
 
 
 def key_pressed(event):
@@ -31,9 +32,9 @@ def key_pressed(event):
         reset_snake()
         alive = True
         apples = []
-        apples.append(create_apple("green"))
-        apples.append(create_apple("green"))
-        apples.append(create_apple("red"))
+        apples.append(create_apple("green", snake, apples))
+        apples.append(create_apple("green", snake, apples))
+        apples.append(create_apple("red", snake, apples))
         draw_snake()
         draw_apples(apples)
         return

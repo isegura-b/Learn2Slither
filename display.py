@@ -4,7 +4,7 @@ from snake import snake
 
 
 BOARD_SIZE = 12
-CELL_SIZE = 100
+CELL_SIZE = 50
 WINDOW_SIZE = BOARD_SIZE * CELL_SIZE
 
 window = tk.Tk()
@@ -97,19 +97,19 @@ def draw_snake():
         if i == 0:
 
             canvas.create_rectangle(
-                x1 + 30,
-                y1 + 30,
-                x1 + 70,
-                y1 + 70,
+                x1 + CELL_SIZE * 0.3,
+                y1 + CELL_SIZE * 0.3,
+                x1 + CELL_SIZE * 0.7,
+                y1 + CELL_SIZE * 0.7,
                 fill="white",
                 tags="snake"
             )
 
             canvas.create_rectangle(
-                x1 + 40,
-                y1 + 40,
-                x1 + 60,
-                y1 + 60,
+                x1 + CELL_SIZE * 0.4,
+                y1 + CELL_SIZE * 0.4,
+                x1 + CELL_SIZE * 0.6,
+                y1 + CELL_SIZE * 0.6,
                 fill="black",
                 tags="snake"
             )
@@ -140,10 +140,10 @@ def draw_rip_snake():
         if i == 0:
 
             canvas.create_rectangle(
-                x1 + 30,
-                y1 + 30,
-                x1 + 70,
-                y1 + 70,
+                x1 + CELL_SIZE * 0.3,
+                y1 + CELL_SIZE * 0.3,
+                x1 + CELL_SIZE * 0.7,
+                y1 + CELL_SIZE * 0.7,
                 fill="white",
                 tags="snake"
             )
@@ -161,19 +161,19 @@ def draw_apple(apple, rgb):
 
     if (rgb == "red"):
         canvas.create_oval(
-            x1 + 20,
-            y1 + 20,
-            x2 - 20,
-            y2 - 20,
+            x1 + CELL_SIZE * 0.2,
+            y1 + CELL_SIZE * 0.2,
+            x2 - CELL_SIZE * 0.2,
+            y2 - CELL_SIZE * 0.2,
             fill="red",
             tags="apple"
         )
     else:
         canvas.create_oval(
-            x1 + 20,
-            y1 + 20,
-            x2 - 20,
-            y2 - 20,
+            x1 + CELL_SIZE * 0.2,
+            y1 + CELL_SIZE * 0.2,
+            x2 - CELL_SIZE * 0.2,
+            y2 - CELL_SIZE * 0.2,
             fill="green",
             tags="apple"
         )

@@ -55,7 +55,7 @@ def move_snake(new_direction, apples):
             print("Game Over: body")
             return False
 
-    grow = apple_eaten(new_head, apples)
+    grow = apple_eaten(new_head, apples, snake)
     snake.insert(0, new_head)
     if grow == 0:
         snake.pop()
