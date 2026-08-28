@@ -14,8 +14,10 @@ from display import draw_apples
 
 from state import get_state
 
-from agent import q_table
+from agent import get_q_values
 from agent import add_state
+from agent import choose_random_action
+from agent import choose_best_action
 
 alive = True
 
@@ -49,16 +51,16 @@ def key_pressed(event):
 
     if event.keysym == "Right":
         alive = move_snake("Right", apples)
-        print("Right")
+        print("Keyboard: Right")
     elif event.keysym == "Left":
         alive = move_snake("Left", apples)
-        print("Left")
+        print("Keyboard: Left")
     elif event.keysym == "Up":
         alive = move_snake("Up", apples)
-        print("Up")
+        print("Keyboard: Up")
     elif event.keysym == "Down":
         alive = move_snake("Down", apples)
-        print("Down")
+        print("Keyboard: Down")
     else:            #if any other key
         return
 
@@ -71,8 +73,12 @@ def key_pressed(event):
 
     state = get_state(snake, apples)
     add_state(state)
-    print("States learned:", len(q_table))
-    print(state)
+    action = choose_random_action()
+    print("Random agent would choose:", action)
+    action = choose_best_action(state)
+    print("Agent would choose:", action)
+    q_values = get_q_values(state)
+    print(q_values, "\n")
 
 
 draw_wall()
