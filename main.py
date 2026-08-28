@@ -18,6 +18,7 @@ from agent import get_q_values
 from agent import add_state
 from agent import choose_random_action
 from agent import choose_best_action
+from agent import q_table
 
 alive = True
 
@@ -73,6 +74,7 @@ def key_pressed(event):
 
     state = get_state(snake, apples)
     add_state(state)
+    print("States learned:", len(q_table))
     action = choose_random_action()
     print("Random agent would choose:", action)
     action = choose_best_action(state)
