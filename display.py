@@ -4,7 +4,7 @@ from snake import snake
 
 
 BOARD_SIZE = 12
-CELL_SIZE = 50
+CELL_SIZE = 100
 WINDOW_SIZE = BOARD_SIZE * CELL_SIZE
 
 window = tk.Tk()

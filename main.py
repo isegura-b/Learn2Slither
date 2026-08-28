@@ -12,6 +12,11 @@ from display import draw_wall
 from display import draw_rip_snake
 from display import draw_apples
 
+from state import get_state
+
+from agent import q_table
+from agent import add_state
+
 alive = True
 
 apples = []
@@ -44,12 +49,16 @@ def key_pressed(event):
 
     if event.keysym == "Right":
         alive = move_snake("Right", apples)
+        print("Right")
     elif event.keysym == "Left":
         alive = move_snake("Left", apples)
+        print("Left")
     elif event.keysym == "Up":
         alive = move_snake("Up", apples)
+        print("Up")
     elif event.keysym == "Down":
         alive = move_snake("Down", apples)
+        print("Down")
     else:            #if any other key
         return
 
@@ -59,6 +68,11 @@ def key_pressed(event):
 
     draw_snake()
     draw_apples(apples)
+
+    state = get_state(snake, apples)
+    add_state(state)
+    print("States learned:", len(q_table))
+    print(state)
 
 
 draw_wall()
