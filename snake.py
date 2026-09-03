@@ -7,9 +7,8 @@ snake = [
 ]
 
 direction = "Right"
-def move_snake(new_direction, apples):
 
-    global direction
+def is_opposite_direction(new_direction):
     if direction == "Right" and new_direction == "Left":
         return True
     if direction == "Left" and new_direction == "Right":
@@ -18,6 +17,13 @@ def move_snake(new_direction, apples):
         return True
     if direction == "Down" and new_direction == "Up":
         return True
+    return False
+
+def move_snake(new_direction, apples):
+
+    global direction
+    if len(snake) > 1 and is_opposite_direction(new_direction):
+        return (True, 0)
 
     direction = new_direction
     head = snake[0]
@@ -44,7 +50,7 @@ def move_snake(new_direction, apples):
         or new_head[1] >= 11
     ):
         print("Game Over: wall")
-        return False
+        return (False, 0)
 
     for i in range(1, len(snake)):
 
@@ -53,7 +59,7 @@ def move_snake(new_direction, apples):
             and new_head[1] == snake[i][1]
         ):
             print("Game Over: body")
-            return False
+            return (False, 0)
 
     grow = apple_eaten(new_head, apples, snake)
     snake.insert(0, new_head)
@@ -65,11 +71,11 @@ def move_snake(new_direction, apples):
             snake.pop()
         if len(snake) == 0:
             print("Game Over: length 0")
-            return False
+            return (False, -1)
     elif grow == 1:
         pass
 
-    return True
+    return (True, grow)
 
 def reset_snake():
     global direction

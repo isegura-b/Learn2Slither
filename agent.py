@@ -36,3 +36,29 @@ def choose_best_action(state):
     action = random.choice(best_actions)
     return action
 
+alpha = 0.1
+gamma = 0.9
+
+def update_q_value(state, action, reward, next_state):
+
+    old_q = q_table[state][action]
+
+    if next_state == None:
+        best_next_q = 0
+    else:
+        next_q_values = get_q_values(next_state)
+        best_next_q = max(next_q_values.values())
+
+    new_q = old_q + alpha * ( reward + gamma * best_next_q - old_q)
+    q_table[state][action] = new_q
+
+def choose_action(state, epsilon):
+
+    random_number = random.random()
+
+    if random_number < epsilon:
+        action = choose_random_action()
+    else:
+        action = choose_best_action(state)
+
+    return action
