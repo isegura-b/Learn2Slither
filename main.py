@@ -1,6 +1,7 @@
 from snake import move_snake
 from snake import reset_snake
 from snake import snake
+from snake import get_valid_actions
 
 from apple import create_apple
 
@@ -15,6 +16,7 @@ from state import get_state
 
 from agent import add_state
 from agent import choose_action
+from agent import choose_random_action
 from agent import update_q_value
 from agent import q_table
 
@@ -23,8 +25,11 @@ from reward import get_reward
 
 alive = True
 auto_mode = False
+real_mode = False
 
 epsilon = 1.0
+MIN_EPSILON = 0.05
+EPSILON_DECAY = 0.995
 episodes = 0
 
 
@@ -52,40 +57,52 @@ def restart_game():
 
 
 # -------------------------
-# MANUAL
+# MANUAL - 1
 # -------------------------
 
 def key_pressed(event):
 
     global alive
     global auto_mode
+    global real_mode
 
     if event.keysym == "Escape":
         window.destroy()
         return
 
-    if event.keysym == "space":
-        if auto_mode == False:
-            auto_mode = True
-            print("AUTO MODE")
-        else:
-            auto_mode = False
-            print("MANUAL MODE")
+    if event.keysym == "1":
+        auto_mode = False
+        real_mode = False
+        print("MODE 1: MANUAL")
         return
 
-    if event.keysym == "f" or event.keysym == "F":
-        print("FAST TRAINING")
+    if event.keysym == "2":
+        auto_mode = True
+        real_mode = False
+        print("MODE 2: AUTO TRAINING")
+        return
+
+    if event.keysym == "3":
+        auto_mode = False
+        real_mode = False
+        print("MODE 3: FAST TRAINING")
         fast_training()
         print("FAST TRAINING FINISHED")
+        return
+
+    if event.keysym == "4":
+        auto_mode = True
+        real_mode = True
+        print("MODE 4: REAL EVALUATION (epsilon = 0, learning disabled)")
         return
 
     if event.keysym == "r" or event.keysym == "R":
         restart_game()
         return
 
-    # State BEFORE movement
-    state = get_state(snake, apples)
-    add_state(state)
+    if alive == False:
+        print("GAME OVER: press R to restart or select another mode")
+        return
 
     # Action
     if event.keysym == "Right":
@@ -99,17 +116,34 @@ def key_pressed(event):
     else:
         return
 
+    valid_actions = get_valid_actions()
+    if action not in valid_actions:
+        print("Invalid action: opposite direction ignored")
+        return
+
+    # State BEFORE movement
+    state = get_state(snake, apples)
+    add_state(state)
+
     alive, grow = move_snake(action, apples)
 
     # Reward
     reward = get_reward(alive, grow, len(snake))
 
-    # Next state
-    next_state = get_state(snake, apples)
-    add_state(next_state)
-
-    # Bellman
-    update_q_value(state, action, reward, next_state)
+    # Next state and Bellman update
+    if alive == False:
+        update_q_value(state, action, reward, None, None)
+    else:
+        next_state = get_state(snake, apples)
+        next_valid_actions = get_valid_actions()
+        add_state(next_state)
+        update_q_value(
+            state,
+            action,
+            reward,
+            next_state,
+            next_valid_actions
+        )
 
     print("Keyboard:", action)
     print("Reward:", reward)
@@ -125,7 +159,7 @@ def key_pressed(event):
 
 
 # -------------------------
-# AUTO
+# AUTO - 2      RealMode - 4
 # -------------------------
 
 def training_step():
@@ -133,6 +167,7 @@ def training_step():
     global alive
     global apples
     global auto_mode
+    global real_mode
     global epsilon
     global episodes
 
@@ -142,17 +177,27 @@ def training_step():
         return
 
     if alive == False:
-        episodes = episodes + 1
+        if real_mode == False:
+            episodes = episodes + 1
+            epsilon = max(MIN_EPSILON, epsilon * EPSILON_DECAY)
         restart_game()
         window.after(100, training_step)
         return
 
     # State BEFORE movement
     state = get_state(snake, apples)
-    add_state(state)
+    valid_actions = get_valid_actions()
+    if real_mode == False:
+        add_state(state)
 
     # Agent chooses action
-    action = choose_action(state, epsilon)
+    if real_mode == True:
+        if state in q_table:
+            action = choose_action(state, 0.0, valid_actions)
+        else:
+            action = choose_random_action(valid_actions)
+    else:
+        action = choose_action(state, epsilon, valid_actions)
 
     # Move
     alive, grow = move_snake(action, apples)
@@ -160,14 +205,32 @@ def training_step():
     # Reward
     reward = get_reward(alive, grow, len(snake))
 
-    # Next state
-    next_state = get_state(snake, apples)
-    add_state(next_state)
+    # Bellman update only while training
+    if real_mode == False:
+        if alive == False:
+            update_q_value(state, action, reward, None, None)
+        else:
+            next_state = get_state(snake, apples)
+            next_valid_actions = get_valid_actions()
+            add_state(next_state)
+            update_q_value(
+                state,
+                action,
+                reward,
+                next_state,
+                next_valid_actions
+            )
 
-    # Bellman
-    update_q_value(state, action, reward, next_state)
-
-    print("Agent:", action)
+    if real_mode == True:
+        print("Real agent:", action)
+        print("State:", state)
+        if state in q_table:
+            print("Q values:", q_table[state])
+        else:
+            print("Q values: STATE NOT LEARNED")
+        print("Action:", action)
+    else:
+        print("Training agent:", action)
     print("Reward:", reward)
     print("States learned:", len(q_table))
     print()
@@ -183,7 +246,7 @@ def training_step():
 
 
 # -------------------------
-# FAST TRAIN
+# FAST TRAIN - 3
 # -------------------------
 
 def fast_training():
@@ -200,6 +263,7 @@ def fast_training():
 
         if alive == False or episode_steps >= max_steps:
             episodes = episodes + 1
+            epsilon = max(MIN_EPSILON, epsilon * EPSILON_DECAY)
             episode_steps = 0
             reset_snake()
 
@@ -211,9 +275,6 @@ def fast_training():
             apples.append(create_apple("red", snake, apples))
 
             if episodes % 100 == 0:
-                epsilon = epsilon - 0.1
-                if epsilon < 0:
-                    epsilon = 0
                 print("Episodes:", episodes)
                 print("Epsilon:", epsilon)
                 print("States learned:", len(q_table))
@@ -222,10 +283,11 @@ def fast_training():
 
         # State BEFORE movement
         state = get_state(snake, apples)
+        valid_actions = get_valid_actions()
         add_state(state)
 
         # Agent chooses action
-        action = choose_action(state, epsilon)
+        action = choose_action(state, epsilon, valid_actions)
 
         # Move
         alive, grow = move_snake(action, apples)
@@ -236,13 +298,20 @@ def fast_training():
 
         # Next state
         if alive == False:
-            update_q_value(state, action, reward, None)
+            update_q_value(state, action, reward, None, None)
         else:
             next_state = get_state(snake, apples)
+            next_valid_actions = get_valid_actions()
             add_state(next_state)
 
             # Bellman
-            update_q_value(state, action, reward, next_state)
+            update_q_value(
+                state,
+                action,
+                reward,
+                next_state,
+                next_valid_actions
+            )
 
 draw_wall()
 draw_board()

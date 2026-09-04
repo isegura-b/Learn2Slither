@@ -1,29 +1,45 @@
 from apple import apple_eaten
+import random
 
-snake = [
-    [5, 5],
-    [5, 4],
-    [5, 3]
-]
-
+snake = []
 direction = "Right"
 
 def is_opposite_direction(new_direction):
+
     if direction == "Right" and new_direction == "Left":
         return True
+
     if direction == "Left" and new_direction == "Right":
         return True
+
     if direction == "Up" and new_direction == "Down":
         return True
+
     if direction == "Down" and new_direction == "Up":
         return True
+
     return False
+
+def get_valid_actions():
+
+    actions = [
+        "Up",
+        "Down",
+        "Left",
+        "Right"
+    ]
+
+    valid_actions = []
+
+    for action in actions:
+        if is_opposite_direction(action) == False:
+            valid_actions.append(action)
+
+    return valid_actions
 
 def move_snake(new_direction, apples):
 
     global direction
-    if len(snake) > 1 and is_opposite_direction(new_direction):
-        return (True, 0)
 
     direction = new_direction
     head = snake[0]
@@ -52,17 +68,13 @@ def move_snake(new_direction, apples):
         print("Game Over: wall")
         return (False, 0)
 
-    for i in range(1, len(snake)):
-
-        if (
-            new_head[0] == snake[i][0]
-            and new_head[1] == snake[i][1]
-        ):
+    for i in range(1, len(snake) - 1):
+        if ( new_head[0] == snake[i][0] and new_head[1] == snake[i][1] ):
             print("Game Over: body")
             return (False, 0)
 
-    grow = apple_eaten(new_head, apples, snake)
     snake.insert(0, new_head)
+    grow = apple_eaten(new_head, apples, snake)
     if grow == 0:
         snake.pop()
     elif grow == -1:
@@ -78,13 +90,51 @@ def move_snake(new_direction, apples):
     return (True, grow)
 
 def reset_snake():
+
     global direction
-
     snake.clear()
+    while True:
+        row = random.randint(1, 10)
+        col = random.randint(1, 10)
+        directions = [
+            "Right",
+            "Left",
+            "Up",
+            "Down"
+        ]
 
-    snake.append([5, 5])
-    snake.append([5, 4])
-    snake.append([5, 3])
-    snake.append([5, 2])
+        direction = random.choice(directions)
+        if direction == "Right":
+            head = [row, col]
+            body1 = [row, col - 1]
+            body2 = [row, col - 2]
+        elif direction == "Left":
+            head = [row, col]
+            body1 = [row, col + 1]
+            body2 = [row, col + 2]
+        elif direction == "Up":
+            head = [row, col]
+            body1 = [row + 1, col]
+            body2 = [row + 2, col]
+        elif direction == "Down":
+            head = [row, col]
+            body1 = [row - 1, col]
+            body2 = [row - 2, col]
 
-    direction = "Right"
+        valid = True
+
+
+        if ( body1[0] < 1 or body1[0] > 10 or body1[1] < 1 or body1[1] > 10 ):
+            valid = False
+
+        if ( body2[0] < 1 or body2[0] > 10 or body2[1] < 1 or body2[1] > 10 ):
+            valid = False
+
+        if valid == True:
+            snake.append(head)
+            snake.append(body1)
+            snake.append(body2)
+
+            break
+
+reset_snake()

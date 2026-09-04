@@ -11,12 +11,66 @@ def get_state(snake, apples):
     right = look_right(row, col, snake, apples)
 
     state = (
-        tuple(up),
-        tuple(down),
-        tuple(left),
-        tuple(right)
+        compact_direction(up),
+        compact_direction(down),
+        compact_direction(left),
+        compact_direction(right)
     )
     return state
+
+
+def categorize_distance(distance):
+
+    # 0 
+    if distance == 0:
+        return 0
+
+    # Next
+    if distance == 1:
+        return 1
+
+    # Close
+    if distance <= 3:
+        return 2
+
+    # Far
+    return 3
+
+
+def compact_direction(vision):
+
+
+    green_distance = 0
+    red_distance = 0
+    body_distance = 0
+    wall_distance = 0
+
+    for i in range(len(vision)):
+        content = vision[i]
+        distance = i + 1
+
+        if content == "G" and green_distance == 0:
+            green_distance = distance
+        elif content == "R" and red_distance == 0:
+            red_distance = distance
+        elif content == "S" and body_distance == 0:
+            body_distance = distance
+        elif content == "W" and wall_distance == 0:
+            wall_distance = distance
+
+    immediate_danger = False
+    if len(vision) > 0:
+        if vision[0] == "W" or vision[0] == "S":
+            immediate_danger = True
+
+    compact_vision = (
+        immediate_danger,
+        categorize_distance(green_distance),
+        categorize_distance(red_distance),
+        categorize_distance(body_distance),
+        categorize_distance(wall_distance)
+    )
+    return compact_vision
 
 def get_cell_content(row, col, snake, apples):
 

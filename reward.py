@@ -1,22 +1,18 @@
 GREEN_REWARD = 100
-RED_REWARD = -10
+RED_REWARD = -50
 MOVE_REWARD = -1
 DEATH_REWARD = -100
 
 
-def get_reward(alive, grow, snake_length):
+def get_reward(alive, grow, len):
 
     if alive == False:
-        return -100
-    if snake_length < 10:
-        if grow == 1:
-            return 100
-        if grow == -1:
-            return -50
-    else:
-        if grow == 1:
-            return -10
-        if grow == -1:
-            return 30
+        return DEATH_REWARD
 
-    return -1
+    if grow == 1:
+        return GREEN_REWARD
+
+    if grow == -1:
+        return RED_REWARD
+
+    return MOVE_REWARD
