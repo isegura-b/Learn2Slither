@@ -12,6 +12,9 @@ from display import draw_wall
 from display import draw_rip_snake
 from display import draw_apples
 
+from display_snake_view import create_snake_view
+from display_snake_view import update_snake_view
+
 from state import get_state
 
 from agent import add_state
@@ -26,17 +29,45 @@ from reward import get_reward
 alive = True
 auto_mode = False
 real_mode = False
+paused = False
 
-epsilon = 1.0
 MIN_EPSILON = 0.05
-EPSILON_DECAY = 0.995
-episodes = 0
+NEW_LENGTH_EPSILON = 1
+EPSILON_DECAY = 0.9999
+epsilon_by_length = {}
 
+RED_TEXT = "\033[91m"
+RESET_TEXT = "\033[0m"
+
+episodes = 0
 
 apples = []
 apples.append(create_apple("green", snake, apples))
 apples.append(create_apple("green", snake, apples))
 apples.append(create_apple("red", snake, apples))
+
+
+def get_training_epsilon(snake_length):
+    #new lengths start with higher exploration
+    if snake_length not in epsilon_by_length:
+        epsilon_by_length[snake_length] = NEW_LENGTH_EPSILON
+
+    return epsilon_by_length[snake_length]
+
+
+def decay_training_epsilon(snake_length):
+    epsilon_by_length[snake_length] = max( MIN_EPSILON, epsilon_by_length[snake_length] * EPSILON_DECAY )
+
+
+def print_epsilons_by_length():
+
+    for snake_length in sorted(epsilon_by_length):
+        epsilon = epsilon_by_length[snake_length]
+        print("Length:", snake_length, "| epsilon:", format(epsilon, ".3f"))
+
+
+def print_game_over(message="GAME OVER"):
+    print(RED_TEXT + message + RESET_TEXT)
 
 
 def restart_game():
@@ -54,6 +85,31 @@ def restart_game():
 
     draw_snake()
     draw_apples(apples)
+    update_snake_view(snake, apples)
+
+
+def training_transition(state, action):
+
+    global alive
+
+    alive, grow = move_snake(action, apples)
+    reward = get_reward(alive, grow)
+
+    if alive == False:
+        update_q_value(state, action, reward, None, None)
+    else:
+        next_state = get_state(snake, apples)
+        next_valid_actions = get_valid_actions()
+        add_state(next_state)
+        update_q_value(
+            state,
+            action,
+            reward,
+            next_state,
+            next_valid_actions
+        )
+
+    return reward
 
 
 # -------------------------
@@ -65,9 +121,18 @@ def key_pressed(event):
     global alive
     global auto_mode
     global real_mode
+    global paused
 
     if event.keysym == "Escape":
         window.destroy()
+        return
+
+    if event.keysym == "space":
+        paused = not paused
+        if paused == True:
+            print("PAUSED")
+        else:
+            print("PLAYING")
         return
 
     if event.keysym == "1":
@@ -93,6 +158,7 @@ def key_pressed(event):
     if event.keysym == "4":
         auto_mode = True
         real_mode = True
+        restart_game()
         print("MODE 4: REAL EVALUATION (epsilon = 0, learning disabled)")
         return
 
@@ -100,8 +166,11 @@ def key_pressed(event):
         restart_game()
         return
 
+    if paused == True:
+        return
+
     if alive == False:
-        print("GAME OVER: press R to restart or select another mode")
+        print_game_over("GAME OVER: press R to restart or select another mode")
         return
 
     # Action
@@ -116,34 +185,10 @@ def key_pressed(event):
     else:
         return
 
-    valid_actions = get_valid_actions()
-    if action not in valid_actions:
-        print("Invalid action: opposite direction ignored")
-        return
-
-    # State BEFORE movement
-    state = get_state(snake, apples)
-    add_state(state)
-
     alive, grow = move_snake(action, apples)
 
     # Reward
-    reward = get_reward(alive, grow, len(snake))
-
-    # Next state and Bellman update
-    if alive == False:
-        update_q_value(state, action, reward, None, None)
-    else:
-        next_state = get_state(snake, apples)
-        next_valid_actions = get_valid_actions()
-        add_state(next_state)
-        update_q_value(
-            state,
-            action,
-            reward,
-            next_state,
-            next_valid_actions
-        )
+    reward = get_reward(alive, grow)
 
     print("Keyboard:", action)
     print("Reward:", reward)
@@ -153,8 +198,10 @@ def key_pressed(event):
     # Draw
     draw_snake()
     draw_apples(apples)
+    update_snake_view(snake, apples)
 
     if alive == False:
+        print_game_over()
         draw_rip_snake()
 
 
@@ -168,9 +215,11 @@ def training_step():
     global apples
     global auto_mode
     global real_mode
-    global epsilon
     global episodes
 
+    if paused == True:
+        window.after(100, training_step)
+        return
 
     if auto_mode == False:
         window.after(100, training_step)
@@ -179,7 +228,8 @@ def training_step():
     if alive == False:
         if real_mode == False:
             episodes = episodes + 1
-            epsilon = max(MIN_EPSILON, epsilon * EPSILON_DECAY)
+            if episodes % 100 == 0:
+                print_epsilons_by_length()
         restart_game()
         window.after(100, training_step)
         return
@@ -193,33 +243,21 @@ def training_step():
     # Agent chooses action
     if real_mode == True:
         if state in q_table:
+            # NEW: REAL mode always uses epsilon 0
             action = choose_action(state, 0.0, valid_actions)
         else:
             action = choose_random_action(valid_actions)
     else:
+        training_length = len(snake)
+        epsilon = get_training_epsilon(training_length)
         action = choose_action(state, epsilon, valid_actions)
 
-    # Move
-    alive, grow = move_snake(action, apples)
-
-    # Reward
-    reward = get_reward(alive, grow, len(snake))
-
-    # Bellman update only while training
-    if real_mode == False:
-        if alive == False:
-            update_q_value(state, action, reward, None, None)
-        else:
-            next_state = get_state(snake, apples)
-            next_valid_actions = get_valid_actions()
-            add_state(next_state)
-            update_q_value(
-                state,
-                action,
-                reward,
-                next_state,
-                next_valid_actions
-            )
+    if real_mode == True:
+        alive, grow = move_snake(action, apples)
+        reward = get_reward(alive, grow)
+    else:
+        reward = training_transition(state, action)
+        decay_training_epsilon(training_length)
 
     if real_mode == True:
         print("Real agent:", action)
@@ -238,8 +276,10 @@ def training_step():
     # Draw
     draw_snake()
     draw_apples(apples)
+    update_snake_view(snake, apples)
 
     if alive == False:
+        print_game_over()
         draw_rip_snake()
 
     window.after(100, training_step)
@@ -253,20 +293,20 @@ def fast_training():
 
     global alive
     global apples
-    global epsilon
 
     episodes = 0
     episode_steps = 0
     max_steps = 1000
 
     while episodes < 100000:
+        truncated = episode_steps >= max_steps
 
-        if alive == False or episode_steps >= max_steps:
+        if alive == False:# or truncated == True:
             episodes = episodes + 1
-            epsilon = max(MIN_EPSILON, epsilon * EPSILON_DECAY)
-            episode_steps = 0
-            reset_snake()
 
+            episode_steps = 0
+
+            reset_snake()
             alive = True
 
             apples = []
@@ -276,7 +316,7 @@ def fast_training():
 
             if episodes % 100 == 0:
                 print("Episodes:", episodes)
-                print("Epsilon:", epsilon)
+                print_epsilons_by_length()
                 print("States learned:", len(q_table))
                 print()
             continue
@@ -287,36 +327,20 @@ def fast_training():
         add_state(state)
 
         # Agent chooses action
+        training_length = len(snake)
+        epsilon = get_training_epsilon(training_length)
         action = choose_action(state, epsilon, valid_actions)
 
-        # Move
-        alive, grow = move_snake(action, apples)
+        training_transition(state, action)
+        decay_training_epsilon(training_length)
         episode_steps = episode_steps + 1
-
-        # Reward
-        reward = get_reward(alive, grow, len(snake))
-
-        # Next state
-        if alive == False:
-            update_q_value(state, action, reward, None, None)
-        else:
-            next_state = get_state(snake, apples)
-            next_valid_actions = get_valid_actions()
-            add_state(next_state)
-
-            # Bellman
-            update_q_value(
-                state,
-                action,
-                reward,
-                next_state,
-                next_valid_actions
-            )
 
 draw_wall()
 draw_board()
 draw_snake()
 draw_apples(apples)
+create_snake_view(window)
+update_snake_view(snake, apples)
 
 
 window.bind("<Key>", key_pressed)

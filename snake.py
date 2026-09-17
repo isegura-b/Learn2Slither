@@ -4,38 +4,15 @@ import random
 snake = []
 direction = "Right"
 
-def is_opposite_direction(new_direction):
-
-    if direction == "Right" and new_direction == "Left":
-        return True
-
-    if direction == "Left" and new_direction == "Right":
-        return True
-
-    if direction == "Up" and new_direction == "Down":
-        return True
-
-    if direction == "Down" and new_direction == "Up":
-        return True
-
-    return False
+ACTIONS = [
+    "Up",
+    "Down",
+    "Left",
+    "Right"
+]
 
 def get_valid_actions():
-
-    actions = [
-        "Up",
-        "Down",
-        "Left",
-        "Right"
-    ]
-
-    valid_actions = []
-
-    for action in actions:
-        if is_opposite_direction(action) == False:
-            valid_actions.append(action)
-
-    return valid_actions
+    return ACTIONS.copy()
 
 def move_snake(new_direction, apples):
 
@@ -65,12 +42,25 @@ def move_snake(new_direction, apples):
         or new_head[0] >= 11
         or new_head[1] >= 11
     ):
-        print("Game Over: wall")
+        #print("Game Over: wall")
         return (False, 0)
 
-    for i in range(1, len(snake) - 1):
+    # Moving into the last tail cell is safe only when that cell is going to
+    # disappear during this tick. A green apple prevents the tail from moving.
+    tail_will_move = True
+    for apple in apples:
+        apple_position = apple[0]
+        apple_type = apple[1]
+        if new_head == apple_position and apple_type == "green":
+            tail_will_move = False
+
+    body_end = len(snake)
+    if tail_will_move == True:
+        body_end = len(snake) - 1
+
+    for i in range(1, body_end):
         if ( new_head[0] == snake[i][0] and new_head[1] == snake[i][1] ):
-            print("Game Over: body")
+            #print("Game Over: body")
             return (False, 0)
 
     snake.insert(0, new_head)
@@ -82,7 +72,7 @@ def move_snake(new_direction, apples):
         if len(snake) > 0:
             snake.pop()
         if len(snake) == 0:
-            print("Game Over: length 0")
+            #print("Game Over: length 0")
             return (False, -1)
     elif grow == 1:
         pass

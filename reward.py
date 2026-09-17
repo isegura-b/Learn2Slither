@@ -1,10 +1,9 @@
-GREEN_REWARD = 100
-RED_REWARD = -50
-MOVE_REWARD = -1
-DEATH_REWARD = -100
+GREEN_REWARD = 1000
+RED_REWARD = -200
+MOVE_REWARD = -10
+DEATH_REWARD = -500
 
-
-def get_reward(alive, grow, len):
+def get_reward(alive, grow):
 
     if alive == False:
         return DEATH_REWARD

@@ -20,6 +20,19 @@ canvas = tk.Canvas(
 
 canvas.pack()
 
+snake_length_text = tk.StringVar()
+snake_length_label = tk.Label(
+    window,
+    textvariable=snake_length_text,
+    font=("Arial", 18, "bold"),
+    pady=10
+)
+snake_length_label.pack()
+
+
+def update_snake_length():
+    snake_length_text.set("Snake length: " + str(len(snake)))
+
 
 def draw_board():
 
@@ -73,6 +86,7 @@ def draw_wall():
 def draw_snake():
 
     canvas.delete("snake")
+    update_snake_length()
 
     for i in range(len(snake)):
 
@@ -85,17 +99,15 @@ def draw_snake():
         x2 = x1 + CELL_SIZE
         y2 = y1 + CELL_SIZE
 
-        canvas.create_rectangle(
+        if i == 0:
+            canvas.create_rectangle(
             x1,
             y1,
             x2,
             y2,
-            fill="green",
+            fill="deepskyblue",
             tags="snake"
-        )
-
-        if i == 0:
-
+            )
             canvas.create_rectangle(
                 x1 + CELL_SIZE * 0.3,
                 y1 + CELL_SIZE * 0.3,
@@ -104,7 +116,6 @@ def draw_snake():
                 fill="white",
                 tags="snake"
             )
-
             canvas.create_rectangle(
                 x1 + CELL_SIZE * 0.4,
                 y1 + CELL_SIZE * 0.4,
@@ -113,9 +124,19 @@ def draw_snake():
                 fill="black",
                 tags="snake"
             )
+        else:
+            canvas.create_rectangle(
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="royal blue",
+                tags="snake"
+            )
 
 def draw_rip_snake():
     canvas.delete("snake")
+    update_snake_length()
 
     for i in range(len(snake)):
 
@@ -128,23 +149,38 @@ def draw_rip_snake():
         x2 = x1 + CELL_SIZE
         y2 = y1 + CELL_SIZE
 
-        canvas.create_rectangle(
-            x1,
-            y1,
-            x2,
-            y2,
-            fill="green",
-            tags="snake"
-        )
-
         if i == 0:
-
+            canvas.create_rectangle(
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="deepskyblue",
+                tags="snake"
+            )
             canvas.create_rectangle(
                 x1 + CELL_SIZE * 0.3,
                 y1 + CELL_SIZE * 0.3,
                 x1 + CELL_SIZE * 0.7,
                 y1 + CELL_SIZE * 0.7,
                 fill="white",
+                tags="snake"
+            )
+            canvas.create_text(
+                x1 + CELL_SIZE * 0.5,
+                y1 + CELL_SIZE * 0.5,
+                text="X",
+                fill="black",
+                font=("Arial", 18, "bold"),
+                tags="snake"
+            )
+        else:
+            canvas.create_rectangle(
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="royal blue",
                 tags="snake"
             )
 

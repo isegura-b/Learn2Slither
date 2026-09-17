@@ -10,36 +10,45 @@ def get_state(snake, apples):
     left = look_left(row, col, snake, apples)
     right = look_right(row, col, snake, apples)
 
+    up_distances = get_direction_distances(up)
+    down_distances = get_direction_distances(down)
+    left_distances = get_direction_distances(left)
+    right_distances = get_direction_distances(right)
+
     state = (
-        compact_direction(up),
-        compact_direction(down),
-        compact_direction(left),
-        compact_direction(right)
+        categorize_direction(up_distances),
+        categorize_direction(down_distances),
+        categorize_direction(left_distances),
+        categorize_direction(right_distances)
     )
     return state
 
 
 def categorize_distance(distance):
 
-    # 0 
+    #0 not visible, 1 adjacent, 2 near, 3 far
     if distance == 0:
         return 0
-
-    # Next
     if distance == 1:
         return 1
-
-    # Close
     if distance <= 3:
         return 2
-
-    # Far
     return 3
 
 
-def compact_direction(vision):
+def categorize_direction(distances):
+
+    return (
+        categorize_distance(distances[0]),
+        categorize_distance(distances[1]),
+        categorize_distance(distances[2]),
+        categorize_distance(distances[3])
+    )
 
 
+def get_direction_distances(vision):
+
+    #0 means object not visible in this ray
     green_distance = 0
     red_distance = 0
     body_distance = 0
@@ -47,6 +56,7 @@ def compact_direction(vision):
 
     for i in range(len(vision)):
         content = vision[i]
+        #exact distance from head
         distance = i + 1
 
         if content == "G" and green_distance == 0:
@@ -58,19 +68,13 @@ def compact_direction(vision):
         elif content == "W" and wall_distance == 0:
             wall_distance = distance
 
-    immediate_danger = False
-    if len(vision) > 0:
-        if vision[0] == "W" or vision[0] == "S":
-            immediate_danger = True
-
-    compact_vision = (
-        immediate_danger,
-        categorize_distance(green_distance),
-        categorize_distance(red_distance),
-        categorize_distance(body_distance),
-        categorize_distance(wall_distance)
+    direction_distances = (
+        green_distance,
+        red_distance,
+        body_distance,
+        wall_distance
     )
-    return compact_vision
+    return direction_distances
 
 def get_cell_content(row, col, snake, apples):
 
