@@ -1,3 +1,7 @@
+import sys
+
+from arguments import build_parser
+
 from snake import move_snake
 from snake import reset_snake
 from snake import snake
@@ -5,25 +9,28 @@ from snake import get_valid_actions
 
 from apple import create_apple
 
-from display import window
-from display import draw_board
-from display import draw_snake
-from display import draw_wall
-from display import draw_rip_snake
-from display import draw_apples
-
-from display_snake_view import create_snake_view
-from display_snake_view import update_snake_view
-
 from state import get_state
 
 from agent import add_state
 from agent import choose_action
 from agent import choose_random_action
-from agent import update_q_value
 from agent import q_table
+from agent import alpha as ALPHA
+from agent import gamma as GAMMA
 
 from reward import get_reward
+
+from model import load_model
+from model import save_model
+
+from training import decay_training_epsilon
+from training import epsilon_by_length
+from training import fast_training
+from training import get_training_epsilon
+from training import print_epsilons_by_length
+from training import print_step_info
+from training import run_sessions
+from training import training_transition
 
 
 alive = True
@@ -31,15 +38,19 @@ auto_mode = False
 real_mode = False
 paused = False
 
-MIN_EPSILON = 0.05
-NEW_LENGTH_EPSILON = 1
-EPSILON_DECAY = 0.9999
-epsilon_by_length = {}
-
 RED_TEXT = "\033[91m"
 RESET_TEXT = "\033[0m"
 
 episodes = 0
+
+window = None
+draw_board = None
+draw_snake = None
+draw_wall = None
+draw_rip_snake = None
+draw_apples = None
+create_snake_view = None
+update_snake_view = None
 
 apples = []
 apples.append(create_apple("green", snake, apples))
@@ -47,69 +58,60 @@ apples.append(create_apple("green", snake, apples))
 apples.append(create_apple("red", snake, apples))
 
 
-def get_training_epsilon(snake_length):
-    #new lengths start with higher exploration
-    if snake_length not in epsilon_by_length:
-        epsilon_by_length[snake_length] = NEW_LENGTH_EPSILON
-
-    return epsilon_by_length[snake_length]
-
-
-def decay_training_epsilon(snake_length):
-    epsilon_by_length[snake_length] = max( MIN_EPSILON, epsilon_by_length[snake_length] * EPSILON_DECAY )
-
-
-def print_epsilons_by_length():
-
-    for snake_length in sorted(epsilon_by_length):
-        epsilon = epsilon_by_length[snake_length]
-        print("Length:", snake_length, "| epsilon:", format(epsilon, ".3f"))
-
-
 def print_game_over(message="GAME OVER"):
     print(RED_TEXT + message + RESET_TEXT)
 
 
-def restart_game():
+def load_training_model(model_path):
+    global episodes
 
+    metadata = load_model(model_path, q_table, epsilon_by_length)
+    episodes = metadata["episodes"]
+    return metadata
+
+
+def initialize_display():
+    global window
+    global draw_board
+    global draw_snake
+    global draw_wall
+    global draw_rip_snake
+    global draw_apples
+    global create_snake_view
+    global update_snake_view
+
+    import display
+    import display_snake_view
+
+    window = display.window
+    draw_board = display.draw_board
+    draw_snake = display.draw_snake
+    draw_wall = display.draw_wall
+    draw_rip_snake = display.draw_rip_snake
+    draw_apples = display.draw_apples
+    create_snake_view = display_snake_view.create_snake_view
+    update_snake_view = display_snake_view.update_snake_view
+
+
+def reset_game_state():
     global alive
     global apples
 
     reset_snake()
     alive = True
     apples = []
-
     apples.append(create_apple("green", snake, apples))
     apples.append(create_apple("green", snake, apples))
     apples.append(create_apple("red", snake, apples))
+    return alive, apples
+
+
+def restart_game():
+    reset_game_state()
 
     draw_snake()
     draw_apples(apples)
     update_snake_view(snake, apples)
-
-
-def training_transition(state, action):
-
-    global alive
-
-    alive, grow = move_snake(action, apples)
-    reward = get_reward(alive, grow)
-
-    if alive == False:
-        update_q_value(state, action, reward, None, None)
-    else:
-        next_state = get_state(snake, apples)
-        next_valid_actions = get_valid_actions()
-        add_state(next_state)
-        update_q_value(
-            state,
-            action,
-            reward,
-            next_state,
-            next_valid_actions
-        )
-
-    return reward
 
 
 # -------------------------
@@ -122,6 +124,7 @@ def key_pressed(event):
     global auto_mode
     global real_mode
     global paused
+    global episodes
 
     if event.keysym == "Escape":
         window.destroy()
@@ -151,7 +154,12 @@ def key_pressed(event):
         auto_mode = False
         real_mode = False
         print("MODE 3: FAST TRAINING")
-        fast_training()
+        alive, episodes = fast_training(
+            alive,
+            apples,
+            episodes,
+            reset_game_state
+        )
         print("FAST TRAINING FINISHED")
         return
 
@@ -243,7 +251,7 @@ def training_step():
     # Agent chooses action
     if real_mode == True:
         if state in q_table:
-            # NEW: REAL mode always uses epsilon 0
+            #REAL mode always uses epsilon 0
             action = choose_action(state, 0.0, valid_actions)
         else:
             action = choose_random_action(valid_actions)
@@ -256,22 +264,13 @@ def training_step():
         alive, grow = move_snake(action, apples)
         reward = get_reward(alive, grow)
     else:
-        reward = training_transition(state, action)
+        alive, reward = training_transition(state, action, apples)
         decay_training_epsilon(training_length)
 
     if real_mode == True:
-        print("Real agent:", action)
-        print("State:", state)
-        if state in q_table:
-            print("Q values:", q_table[state])
-        else:
-            print("Q values: STATE NOT LEARNED")
-        print("Action:", action)
+        print_step_info("Real", state, action, reward)
     else:
-        print("Training agent:", action)
-    print("Reward:", reward)
-    print("States learned:", len(q_table))
-    print()
+        print_step_info("Training", state, action, reward)
 
     # Draw
     draw_snake()
@@ -285,65 +284,106 @@ def training_step():
     window.after(100, training_step)
 
 
-# -------------------------
-# FAST TRAIN - 3
-# -------------------------
+def initialize_board():
+    draw_wall()
+    draw_board()
+    draw_snake()
+    draw_apples(apples)
+    create_snake_view(window)
+    update_snake_view(snake, apples)
 
-def fast_training():
 
+def draw_current_state(dead=False):
+    draw_snake()
+    draw_apples(apples)
+    update_snake_view(snake, apples)
+    if dead:
+        draw_rip_snake()
+    window.update_idletasks()
+    window.update()
+
+
+def wait_for_visual_step(step_by_step):
+    if step_by_step:
+        import tkinter as tk
+
+        step_requested = tk.BooleanVar(master=window, value=False)
+        window.bind_all("<space>", lambda event: step_requested.set(True))
+        window.bind_all("<Return>", lambda event: step_requested.set(True))
+        window.wait_variable(step_requested)
+    else:
+        window.after(1)
+
+
+def run_interactive():
+    initialize_display()
+    initialize_board()
+    window.bind("<Key>", key_pressed)
+    training_step()
+    window.mainloop()
+
+
+def run_cli(args, parser):
     global alive
-    global apples
+    global episodes
 
-    episodes = 0
-    episode_steps = 0
-    max_steps = 1000
+    visual = args.visual == "on"
 
-    while episodes < 100000:
-        truncated = episode_steps >= max_steps
+    if args.step_by_step and not visual:
+        parser.error("-step-by-step requires -visual on")
 
-        if alive == False:# or truncated == True:
-            episodes = episodes + 1
+    if args.load:
+        metadata = load_training_model(args.load)
+        print("Load trained model from", metadata["path"])
 
-            episode_steps = 0
+    if visual:
+        initialize_display()
+        initialize_board()
+        if args.step_by_step:
+            print("Press Space or Enter for each move")
+    metrics, episodes, alive = run_sessions(
+        args.sessions,
+        episodes,
+        reset_game_state,
+        learn=not args.dontlearn,
+        visual=visual,
+        step_by_step=args.step_by_step,
+        draw_current_state=draw_current_state,
+        wait_for_visual_step=wait_for_visual_step
+    )
+    print(
+        "Game over, max length = "
+        + str(metrics["max_length"])
+        + ", max duration = "
+        + str(metrics["max_duration"])
+    )
 
-            reset_snake()
-            alive = True
+    if args.save:
+        model_path = save_model(
+            q_table,
+            epsilon_by_length,
+            episodes,
+            ALPHA,
+            GAMMA,
+            args.save
+        )
+        print("Save learning state in", model_path)
 
-            apples = []
-            apples.append(create_apple("green", snake, apples))
-            apples.append(create_apple("green", snake, apples))
-            apples.append(create_apple("red", snake, apples))
-
-            if episodes % 100 == 0:
-                print("Episodes:", episodes)
-                print_epsilons_by_length()
-                print("States learned:", len(q_table))
-                print()
-            continue
-
-        # State BEFORE movement
-        state = get_state(snake, apples)
-        valid_actions = get_valid_actions()
-        add_state(state)
-
-        # Agent chooses action
-        training_length = len(snake)
-        epsilon = get_training_epsilon(training_length)
-        action = choose_action(state, epsilon, valid_actions)
-
-        training_transition(state, action)
-        decay_training_epsilon(training_length)
-        episode_steps = episode_steps + 1
-
-draw_wall()
-draw_board()
-draw_snake()
-draw_apples(apples)
-create_snake_view(window)
-update_snake_view(snake, apples)
+    if visual:
+        window.destroy()
 
 
-window.bind("<Key>", key_pressed)
-training_step()
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:] #quita el primer elemento
+    if len(argv) == 0:
+        run_interactive()
+        return
 
-window.mainloop()
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    run_cli(args, parser)
+
+
+if __name__ == "__main__":
+    main()
