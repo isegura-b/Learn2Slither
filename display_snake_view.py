@@ -27,11 +27,13 @@ CELL_COLORS = {
 
 snake_view_window = None
 snake_view_canvas = None
+info_text = None
 
 
 def create_snake_view(parent):
     global snake_view_window
     global snake_view_canvas
+    global info_text
 
     if snake_view_window is not None:
         return
@@ -47,8 +49,39 @@ def create_snake_view(parent):
     )
     snake_view_canvas.pack()
 
+    info_text = tk.StringVar(master=snake_view_window)
+    tk.Label(
+        snake_view_window,
+        textvariable=info_text,
+        justify="left",
+        anchor="w"
+    ).pack(fill="x", padx=10, pady=10)
+
     # Closing this window hides it without affecting the main game window.
     snake_view_window.protocol("WM_DELETE_WINDOW", snake_view_window.withdraw)
+
+
+def update_info(
+    mode, episodes, snake_length, duration, learning,
+    epsilon, action, reward, states_learned, paused
+):
+    if reward is None:
+        reward = "-"
+    else:
+        reward = reward
+    info_text.set(
+        f"Mode: {mode}\n"
+        f"Episodes: {episodes} |  Length: {snake_length} | Duration: {duration}\n"
+
+        f"Learning: {'ON' if learning else 'OFF'} | Epsilon: {epsilon:.3f}\n"
+
+        f"Last action: {action or '-'} | Last reward: {reward}\n"
+
+        f"States learned: {states_learned} | Paused: {'YES' if paused else 'NO'}\n\n"
+         
+        "1 Manual | 2 Auto | 3 Fast | 4 RealMode\n"
+        "R Restart | Space Pause | Esc Exit"
+    )
 
 
 def draw_cell(grid_row, grid_col, content):

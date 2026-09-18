@@ -16,6 +16,7 @@ from reward import get_reward
 MIN_EPSILON = 0.05
 NEW_LENGTH_EPSILON = 1
 EPSILON_DECAY = 0.9999
+MAX_EVALUATION_STEPS = 10000
 epsilon_by_length = {}
 
 
@@ -130,7 +131,10 @@ def run_sessions(
         if visual:
             draw_current_state()
 
-        while alive:
+        while (
+            alive
+            and (learn or session_duration < MAX_EVALUATION_STEPS)
+        ):
             if visual:
                 wait_for_visual_step(step_by_step)
 

@@ -27,6 +27,7 @@ from training import decay_training_epsilon
 from training import epsilon_by_length
 from training import fast_training
 from training import get_training_epsilon
+from training import NEW_LENGTH_EPSILON
 from training import print_epsilons_by_length
 from training import print_step_info
 from training import run_sessions
@@ -42,6 +43,12 @@ RED_TEXT = "\033[91m"
 RESET_TEXT = "\033[0m"
 
 episodes = 0
+current_duration = 0
+last_action = None
+last_reward = None
+current_mode = "Manual"
+current_learning = False
+current_epsilon = 0.0
 
 window = None
 draw_board = None
@@ -51,6 +58,7 @@ draw_rip_snake = None
 draw_apples = None
 create_snake_view = None
 update_snake_view = None
+update_info = None
 
 apples = []
 apples.append(create_apple("green", snake, apples))
@@ -79,6 +87,7 @@ def initialize_display():
     global draw_apples
     global create_snake_view
     global update_snake_view
+    global update_info
 
     import display
     import display_snake_view
@@ -91,14 +100,53 @@ def initialize_display():
     draw_apples = display.draw_apples
     create_snake_view = display_snake_view.create_snake_view
     update_snake_view = display_snake_view.update_snake_view
+    update_info = display_snake_view.update_info
+
+
+def refresh_info():
+    if update_info is None:
+        return
+
+    update_info(
+        current_mode,
+        episodes,
+        len(snake),
+        current_duration,
+        current_learning,
+        current_epsilon,
+        last_action,
+        last_reward,
+        len(q_table),
+        paused
+    )
+
+
+def set_info_mode(mode, learning, epsilon=None):
+    global current_mode
+    global current_learning
+    global current_epsilon
+
+    current_mode = mode
+    current_learning = learning
+    current_epsilon = (
+        epsilon_by_length.get(len(snake), NEW_LENGTH_EPSILON)
+        if epsilon is None else epsilon
+    )
+    refresh_info()
 
 
 def reset_game_state():
     global alive
     global apples
+    global current_duration
+    global last_action
+    global last_reward
 
     reset_snake()
     alive = True
+    current_duration = 0
+    last_action = None
+    last_reward = None
     apples = []
     apples.append(create_apple("green", snake, apples))
     apples.append(create_apple("green", snake, apples))
@@ -112,6 +160,7 @@ def restart_game():
     draw_snake()
     draw_apples(apples)
     update_snake_view(snake, apples)
+    refresh_info()
 
 
 # -------------------------
@@ -125,6 +174,10 @@ def key_pressed(event):
     global real_mode
     global paused
     global episodes
+    global current_duration
+    global last_action
+    global last_reward
+    global current_epsilon
 
     if event.keysym == "Escape":
         window.destroy()
@@ -136,23 +189,27 @@ def key_pressed(event):
             print("PAUSED")
         else:
             print("PLAYING")
+        refresh_info()
         return
 
     if event.keysym == "1":
         auto_mode = False
         real_mode = False
+        set_info_mode("Manual", False, 0.0)
         print("MODE 1: MANUAL")
         return
 
     if event.keysym == "2":
         auto_mode = True
         real_mode = False
+        set_info_mode("Auto Training", True)
         print("MODE 2: AUTO TRAINING")
         return
 
     if event.keysym == "3":
         auto_mode = False
         real_mode = False
+        set_info_mode("Fast Training", True)
         print("MODE 3: FAST TRAINING")
         alive, episodes = fast_training(
             alive,
@@ -161,13 +218,15 @@ def key_pressed(event):
             reset_game_state
         )
         print("FAST TRAINING FINISHED")
+        set_info_mode("Fast Training", True)
         return
 
     if event.keysym == "4":
         auto_mode = True
         real_mode = True
+        set_info_mode("Greedy Learning", True, 0.0)
         restart_game()
-        print("MODE 4: REAL EVALUATION (epsilon = 0, learning disabled)")
+        print("MODE 4: GREEDY LEARNING (epsilon = 0)")
         return
 
     if event.keysym == "r" or event.keysym == "R":
@@ -197,6 +256,9 @@ def key_pressed(event):
 
     # Reward
     reward = get_reward(alive, grow)
+    current_duration = current_duration + 1
+    last_action = action
+    last_reward = reward
 
     print("Keyboard:", action)
     print("Reward:", reward)
@@ -207,6 +269,7 @@ def key_pressed(event):
     draw_snake()
     draw_apples(apples)
     update_snake_view(snake, apples)
+    refresh_info()
 
     if alive == False:
         print_game_over()
@@ -224,6 +287,10 @@ def training_step():
     global auto_mode
     global real_mode
     global episodes
+    global current_duration
+    global last_action
+    global last_reward
+    global current_epsilon
 
     if paused == True:
         window.after(100, training_step)
@@ -266,6 +333,11 @@ def training_step():
     else:
         alive, reward = training_transition(state, action, apples)
         decay_training_epsilon(training_length)
+        current_epsilon = epsilon_by_length[training_length]
+
+    current_duration = current_duration + 1
+    last_action = action
+    last_reward = reward
 
     if real_mode == True:
         print_step_info("Real", state, action, reward)
@@ -276,6 +348,7 @@ def training_step():
     draw_snake()
     draw_apples(apples)
     update_snake_view(snake, apples)
+    refresh_info()
 
     if alive == False:
         print_game_over()
@@ -291,19 +364,42 @@ def initialize_board():
     draw_apples(apples)
     create_snake_view(window)
     update_snake_view(snake, apples)
+    refresh_info()
 
 
 def draw_current_state(dead=False):
+    global last_action
+    global last_reward
+    global current_epsilon
+
+    if current_duration > 0:
+        import snake as snake_module
+
+        last_action = snake_module.direction
+        length_change = len(snake) - draw_current_state.previous_length
+        last_reward = get_reward(not dead, length_change)
+        if current_learning:
+            current_epsilon = epsilon_by_length.get(
+                draw_current_state.previous_length,
+                NEW_LENGTH_EPSILON
+            )
+
     draw_snake()
     draw_apples(apples)
     update_snake_view(snake, apples)
+    refresh_info()
     if dead:
         draw_rip_snake()
     window.update_idletasks()
     window.update()
 
 
+draw_current_state.previous_length = len(snake)
+
+
 def wait_for_visual_step(step_by_step):
+    global current_duration
+
     if step_by_step:
         import tkinter as tk
 
@@ -312,13 +408,16 @@ def wait_for_visual_step(step_by_step):
         window.bind_all("<Return>", lambda event: step_requested.set(True))
         window.wait_variable(step_requested)
     else:
-        window.after(1)
+        window.after(100)
+
+    draw_current_state.previous_length = len(snake)
+    current_duration = current_duration + 1
 
 
 def run_interactive():
     initialize_display()
     initialize_board()
-    window.bind("<Key>", key_pressed)
+    window.bind_all("<Key>", key_pressed)
     training_step()
     window.mainloop()
 
@@ -326,8 +425,14 @@ def run_interactive():
 def run_cli(args, parser):
     global alive
     global episodes
+    global current_epsilon
 
     visual = args.visual == "on"
+    set_info_mode(
+        "CLI Evaluation" if args.dontlearn else "CLI Training",
+        not args.dontlearn,
+        0.0 if args.dontlearn else None
+    )
 
     if args.step_by_step and not visual:
         parser.error("-step-by-step requires -visual on")
@@ -335,6 +440,22 @@ def run_cli(args, parser):
     if args.load:
         metadata = load_training_model(args.load)
         print("Load trained model from", metadata["path"])
+        if current_learning:
+            current_epsilon = epsilon_by_length.get(
+                len(snake),
+                NEW_LENGTH_EPSILON
+            )
+
+    sessions_started = 0
+
+    def reset_cli_game():
+        nonlocal sessions_started
+        global episodes
+
+        if current_learning and sessions_started > 0:
+            episodes = episodes + 1
+        sessions_started = sessions_started + 1
+        return reset_game_state()
 
     if visual:
         initialize_display()
@@ -344,7 +465,7 @@ def run_cli(args, parser):
     metrics, episodes, alive = run_sessions(
         args.sessions,
         episodes,
-        reset_game_state,
+        reset_cli_game,
         learn=not args.dontlearn,
         visual=visual,
         step_by_step=args.step_by_step,
