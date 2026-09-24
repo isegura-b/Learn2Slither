@@ -11,6 +11,7 @@ from snake import get_valid_actions
 from apple import create_apple
 
 from state import get_state
+from state import get_vision
 
 from agent import add_state
 from agent import choose_action
@@ -176,7 +177,6 @@ def key_pressed(event):
     global current_duration
     global last_action
     global last_reward
-    global current_epsilon
 
     if event.keysym == "Escape":
         window.destroy()
@@ -184,7 +184,7 @@ def key_pressed(event):
 
     if event.keysym == "space":
         paused = not paused
-        if paused == True:
+        if paused:
             print("PAUSED")
         else:
             print("PLAYING")
@@ -232,10 +232,10 @@ def key_pressed(event):
         restart_game()
         return
 
-    if paused == True:
+    if paused:
         return
 
-    if alive == False:
+    if not alive:
         print_game_over("GAME OVER: press R to restart or select another mode")
         return
 
@@ -270,7 +270,7 @@ def key_pressed(event):
     update_snake_view(snake, apples)
     refresh_info()
 
-    if alive == False:
+    if not alive:
         print_game_over()
         draw_rip_snake()
 
@@ -282,25 +282,22 @@ def key_pressed(event):
 def training_step():
 
     global alive
-    global apples
-    global auto_mode
-    global real_mode
     global episodes
     global current_duration
     global last_action
     global last_reward
     global current_epsilon
 
-    if paused == True:
+    if paused:
         window.after(100, training_step)
         return
 
-    if auto_mode == False:
+    if not auto_mode:
         window.after(100, training_step)
         return
 
-    if alive == False:
-        if real_mode == False:
+    if not alive:
+        if not real_mode:
             episodes = episodes + 1
             if episodes % 100 == 0:
                 print_epsilons_by_length()
@@ -309,15 +306,16 @@ def training_step():
         return
 
     # State BEFORE movement
+    vision = get_vision(snake, apples)
     state = get_state(snake, apples)
     valid_actions = get_valid_actions()
-    if real_mode == False:
+    if not real_mode:
         add_state(state)
 
     # Agent chooses action
-    if real_mode == True:
+    if real_mode:
         if state in q_table:
-            #REAL mode always uses epsilon 0
+            # REAL mode always uses epsilon 0
             action = choose_action(state, 0.0, valid_actions)
         else:
             action = choose_random_action(valid_actions)
@@ -326,7 +324,7 @@ def training_step():
         epsilon = get_training_epsilon(training_length)
         action = choose_action(state, epsilon, valid_actions)
 
-    if real_mode == True:
+    if real_mode:
         alive, grow = move_snake(action, apples)
         reward = get_reward(alive, grow)
     else:
@@ -338,10 +336,10 @@ def training_step():
     last_action = action
     last_reward = reward
 
-    if real_mode == True:
-        print_step_info("Real", state, action, reward)
+    if real_mode:
+        print_step_info("Real", vision, state, action, reward)
     else:
-        print_step_info("Training", state, action, reward)
+        print_step_info("Training", vision, state, action, reward)
 
     # Draw
     draw_snake()
@@ -349,7 +347,7 @@ def training_step():
     update_snake_view(snake, apples)
     refresh_info()
 
-    if alive == False:
+    if not alive:
         print_game_over()
         draw_rip_snake()
 
@@ -470,15 +468,26 @@ def run_cli(args, parser):
         learn=not args.dontlearn,
         visual=visual,
         step_by_step=args.step_by_step,
+        show_vision=args.show_vision,
         draw_current_state=draw_current_state,
         wait_for_visual_step=wait_for_visual_step
     )
-    print(
-        "Game over, max length = "
-        + str(metrics["max_length"])
-        + ", max duration = "
-        + str(metrics["max_duration"])
-    )
+    if metrics["truncated_sessions"] > 0:
+        print(
+            "Evaluation finished, step limit reached in "
+            + str(metrics["truncated_sessions"])
+            + " session(s), max length = "
+            + str(metrics["max_length"])
+            + ", max duration = "
+            + str(metrics["max_duration"])
+        )
+    else:
+        print(
+            "Game over, max length = "
+            + str(metrics["max_length"])
+            + ", max duration = "
+            + str(metrics["max_duration"])
+        )
 
     if args.save:
         model_path = save_model(
@@ -497,7 +506,7 @@ def run_cli(args, parser):
 
 def main(argv=None):
     if argv is None:
-        argv = sys.argv[1:] #quita el primer elemento
+        argv = sys.argv[1:]  # quita el primer elemento
     if len(argv) == 0:
         run_interactive()
         return

@@ -17,6 +17,7 @@ def create_apple(apple_type, snake, apples):
 
     return [random.choice(free_cells), apple_type]
 
+
 def apple_eaten(head, apples, snake):
 
     for i in range(len(apples)):

@@ -4,6 +4,7 @@ from board import DEFAULT_HEIGHT
 from board import DEFAULT_WIDTH
 from board import MIN_BOARD_SIDE
 
+
 def positive_int(value):
     number = int(value)
     if number <= 0:
@@ -21,7 +22,9 @@ def board_side(value):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser( description="Train or evaluate the Learn2Slither agent.")
+    parser = argparse.ArgumentParser(
+        description="Train or evaluate the Learn2Slither agent."
+    )
     parser.add_argument(
         "-sessions",
         "--sessions",
@@ -59,6 +62,12 @@ def build_parser():
         "--step-by-step",
         action="store_true",
         help="wait for Space or Enter before each move (visual mode only)"
+    )
+    parser.add_argument(
+        "-show-vision",
+        "--show-vision",
+        action="store_true",
+        help="print the snake's complete vision on every visual step"
     )
     parser.add_argument(
         "-width",

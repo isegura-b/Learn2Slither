@@ -64,10 +64,13 @@ def update_info(
 
     info_text.set(
         f"Mode: {mode}\n"
-        f"Episodes: {episodes} |  Length: {snake_length} | Duration: {duration}\n"
-        f"Learning: {'ON' if learning else 'OFF'} | Epsilon: {epsilon:.3f}\n"
+        f"Episodes: {episodes} |  Length: {snake_length} | "
+        f"Duration: {duration}\n"
+        f"Learning: {'ON' if learning else 'OFF'} | "
+        f"Epsilon: {epsilon:.3f}\n"
         f"Last action: {action or '-'} | Last reward: {reward}\n"
-        f"States learned: {states_learned} | Paused: {'YES' if paused else 'NO'}\n\n"
+        f"States learned: {states_learned} | "
+        f"Paused: {'YES' if paused else 'NO'}\n\n"
         "1 Manual | 2 Auto | 3 Fast | 4 RealMode\n"
         "R Restart | Space Pause | Esc Exit"
     )

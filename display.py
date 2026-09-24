@@ -6,7 +6,13 @@ from snake import snake
 
 BOARD_WIDTH = board.width + 2
 BOARD_HEIGHT = board.height + 2
-CELL_SIZE = max(1, min(100, 800 // max(BOARD_WIDTH, BOARD_HEIGHT)))
+LARGEST_BOARD_SIDE = max(BOARD_WIDTH, BOARD_HEIGHT)
+CELL_SIZE = 800 // LARGEST_BOARD_SIDE
+if CELL_SIZE < 1:
+    CELL_SIZE = 1
+elif CELL_SIZE > 100:
+    CELL_SIZE = 100
+
 WINDOW_WIDTH = BOARD_WIDTH * CELL_SIZE
 WINDOW_HEIGHT = BOARD_HEIGHT * CELL_SIZE
 
@@ -87,8 +93,6 @@ def draw_wall():
                     tags="wall"
                 )
 
-            
-
 
 def draw_snake():
 
@@ -108,12 +112,12 @@ def draw_snake():
 
         if i == 0:
             canvas.create_rectangle(
-            x1,
-            y1,
-            x2,
-            y2,
-            fill="deepskyblue",
-            tags="snake"
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="deepskyblue",
+                tags="snake"
             )
             canvas.create_rectangle(
                 x1 + CELL_SIZE * 0.3,
@@ -140,6 +144,7 @@ def draw_snake():
                 fill="royal blue",
                 tags="snake"
             )
+
 
 def draw_rip_snake():
     canvas.delete("snake")
@@ -190,6 +195,7 @@ def draw_rip_snake():
                 fill="royal blue",
                 tags="snake"
             )
+
 
 def draw_apple(apple, rgb):
 

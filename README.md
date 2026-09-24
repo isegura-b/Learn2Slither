@@ -12,7 +12,8 @@
 | `-visual on/off` | Activa o desactiva completamente la interfaz gráfica. |
 | `-dontlearn` | Evalúa sin modificar Q-table, epsilons ni contador de entrenamiento. |
 | `-step-by-step` | En visual, espera Espacio o Enter antes de cada movimiento. |
-| `-width N` / `-length N` | Cambia el ancho jugable del tablero (mínimo 3, por defecto 10). |
+| `-show-vision` | Muestra en terminal la visión completa de la serpiente. |
+| `-width N` | Cambia el ancho jugable del tablero (mínimo 3, por defecto 10). |
 | `-height N` | Cambia el alto jugable del tablero (mínimo 3, por defecto 10). |
 | `-h` | Muestra la ayuda. |
 

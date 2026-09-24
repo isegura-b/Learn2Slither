@@ -3,9 +3,10 @@ RED_REWARD = -200
 MOVE_REWARD = -10
 DEATH_REWARD = -500
 
+
 def get_reward(alive, grow):
 
-    if alive == False:
+    if not alive:
         return DEATH_REWARD
 
     if grow == 1:

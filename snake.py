@@ -13,8 +13,10 @@ ACTIONS = [
     "Right"
 ]
 
+
 def get_valid_actions():
     return ACTIONS.copy()
+
 
 def move_snake(new_direction, apples):
 
@@ -41,7 +43,7 @@ def move_snake(new_direction, apples):
     if (
         not board.is_inside(new_head[0], new_head[1])
     ):
-        #print("Game Over: wall")
+        # print("Game Over: wall")
         return (False, 0)
 
     # Moving into the last tail cell is safe only when that cell is going to
@@ -54,12 +56,12 @@ def move_snake(new_direction, apples):
             tail_will_move = False
 
     body_end = len(snake)
-    if tail_will_move == True:
+    if tail_will_move:
         body_end = len(snake) - 1
 
     for i in range(1, body_end):
-        if ( new_head[0] == snake[i][0] and new_head[1] == snake[i][1] ):
-            #print("Game Over: body")
+        if new_head[0] == snake[i][0] and new_head[1] == snake[i][1]:
+            # print("Game Over: body")
             return (False, 0)
 
     snake.insert(0, new_head)
@@ -71,12 +73,13 @@ def move_snake(new_direction, apples):
         if len(snake) > 0:
             snake.pop()
         if len(snake) == 0:
-            #print("Game Over: length 0")
+            # print("Game Over: length 0")
             return (False, -1)
     elif grow == 1:
         pass
 
     return (True, grow)
+
 
 def reset_snake():
 
@@ -97,23 +100,39 @@ def reset_snake():
         direction = random.choice(directions)
         if direction == "Right":
             head = [row, col]
-            body = [[row, col - offset] for offset in range(1, initial_length)]
+            body = [
+                [row, col - offset]
+                for offset in range(1, initial_length)
+            ]
         elif direction == "Left":
             head = [row, col]
-            body = [[row, col + offset] for offset in range(1, initial_length)]
+            body = [
+                [row, col + offset]
+                for offset in range(1, initial_length)
+            ]
         elif direction == "Up":
             head = [row, col]
-            body = [[row + offset, col] for offset in range(1, initial_length)]
+            body = [
+                [row + offset, col]
+                for offset in range(1, initial_length)
+            ]
         elif direction == "Down":
             head = [row, col]
-            body = [[row - offset, col] for offset in range(1, initial_length)]
+            body = [
+                [row - offset, col]
+                for offset in range(1, initial_length)
+            ]
 
-        valid = all(board.is_inside(segment[0], segment[1]) for segment in body)
+        valid = all(
+            board.is_inside(segment[0], segment[1])
+            for segment in body
+        )
 
-        if valid == True:
+        if valid:
             snake.append(head)
             snake.extend(body)
 
             break
+
 
 reset_snake()
