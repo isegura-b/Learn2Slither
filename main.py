@@ -1,3 +1,4 @@
+import signal
 import sys
 
 import board
@@ -63,6 +64,23 @@ update_snake_view = None
 update_info = None
 
 apples = []
+
+
+class SignalExit(SystemExit):
+    def __init__(self, signum):
+        self.signum = signum
+        super().__init__(128 + signum)
+
+
+def handle_shutdown_signal(signum, frame):
+    del frame
+    raise SignalExit(signum)
+
+
+def install_signal_handlers():
+    signal.signal(signal.SIGINT, handle_shutdown_signal)
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
 
 def print_game_over(message="GAME OVER"):
@@ -461,54 +479,81 @@ def run_cli(args, parser):
         initialize_board()
         if args.step_by_step:
             print("Press Space or Enter for each move")
-    metrics, episodes, alive = run_sessions(
-        args.sessions,
-        episodes,
-        reset_cli_game,
-        learn=not args.dontlearn,
-        visual=visual,
-        step_by_step=args.step_by_step,
-        show_vision=args.show_vision,
-        draw_current_state=draw_current_state,
-        wait_for_visual_step=wait_for_visual_step
-    )
-    if metrics["truncated_sessions"] > 0:
-        print(
-            "Evaluation finished, step limit reached in "
-            + str(metrics["truncated_sessions"])
-            + " session(s), max length = "
-            + str(metrics["max_length"])
-            + ", max duration = "
-            + str(metrics["max_duration"])
-        )
-    else:
-        print(
-            "Game over, max length = "
-            + str(metrics["max_length"])
-            + ", max duration = "
-            + str(metrics["max_duration"])
-        )
-
-    if args.save:
-        model_path = save_model(
-            q_table,
-            epsilon_by_length,
+    interrupted = None
+    metrics = None
+    try:
+        metrics, episodes, alive = run_sessions(
+            args.sessions,
             episodes,
-            ALPHA,
-            GAMMA,
-            args.save
+            reset_cli_game,
+            learn=not args.dontlearn,
+            visual=visual,
+            step_by_step=args.step_by_step,
+            show_vision=args.show_vision,
+            draw_current_state=draw_current_state,
+            wait_for_visual_step=wait_for_visual_step
         )
-        print("Save learning state in", model_path)
+    except SignalExit as error:
+        interrupted = error
+        print(
+            "Received "
+            + signal.Signals(error.signum).name
+            + "; finishing cleanly."
+        )
 
-    if visual:
-        window.destroy()
+    if metrics is not None:
+        if metrics["truncated_sessions"] > 0:
+            print(
+                "Evaluation finished, step limit reached in "
+                + str(metrics["truncated_sessions"])
+                + " session(s), max length = "
+                + str(metrics["max_length"])
+                + ", max duration = "
+                + str(metrics["max_duration"])
+            )
+        else:
+            print(
+                "Game over, max length = "
+                + str(metrics["max_length"])
+                + ", max duration = "
+                + str(metrics["max_duration"])
+            )
+
+    try:
+        if args.save:
+            model_path = save_model(
+                q_table,
+                epsilon_by_length,
+                episodes,
+                ALPHA,
+                GAMMA,
+                args.save
+            )
+            print("Save learning state in", model_path)
+    finally:
+        if visual:
+            window.destroy()
+
+    if interrupted is not None:
+        raise interrupted
 
 
 def main(argv=None):
+    install_signal_handlers()
     if argv is None:
         argv = sys.argv[1:]  # quita el primer elemento
     if len(argv) == 0:
-        run_interactive()
+        try:
+            run_interactive()
+        except SignalExit as error:
+            print(
+                "Received "
+                + signal.Signals(error.signum).name
+                + "; finishing cleanly."
+            )
+            if window is not None:
+                window.destroy()
+            raise
         return
 
     parser = build_parser()
