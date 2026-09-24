@@ -1,11 +1,14 @@
 import tkinter as tk
 
+import board
 from snake import snake
 
 
-BOARD_SIZE = 12
-CELL_SIZE = 100
-WINDOW_SIZE = BOARD_SIZE * CELL_SIZE
+BOARD_WIDTH = board.width + 2
+BOARD_HEIGHT = board.height + 2
+CELL_SIZE = max(1, min(100, 800 // max(BOARD_WIDTH, BOARD_HEIGHT)))
+WINDOW_WIDTH = BOARD_WIDTH * CELL_SIZE
+WINDOW_HEIGHT = BOARD_HEIGHT * CELL_SIZE
 
 window = tk.Tk()
 
@@ -14,8 +17,8 @@ window.title("Learn2Slither")
 
 canvas = tk.Canvas(
     window,
-    width=WINDOW_SIZE,
-    height=WINDOW_SIZE
+    width=WINDOW_WIDTH,
+    height=WINDOW_HEIGHT
 )
 
 canvas.pack()
@@ -36,7 +39,7 @@ def update_snake_length():
 
 def draw_board():
 
-    for i in range(BOARD_SIZE + 1):
+    for i in range(BOARD_WIDTH + 1):
 
         position = i * CELL_SIZE
 
@@ -44,25 +47,29 @@ def draw_board():
             position,
             0,
             position,
-            WINDOW_SIZE
+            WINDOW_HEIGHT
         )
+
+    for i in range(BOARD_HEIGHT + 1):
+
+        position = i * CELL_SIZE
 
         canvas.create_line(
             0,
             position,
-            WINDOW_SIZE,
+            WINDOW_WIDTH,
             position
         )
 
 
 def draw_wall():
-    for row in range(BOARD_SIZE):
-        for col in range(BOARD_SIZE):
+    for row in range(BOARD_HEIGHT):
+        for col in range(BOARD_WIDTH):
             if (
                 row == 0
-                or row == BOARD_SIZE - 1
+                or row == BOARD_HEIGHT - 1
                 or col == 0
-                or col == BOARD_SIZE - 1
+                or col == BOARD_WIDTH - 1
             ):
 
                 x1 = col * CELL_SIZE

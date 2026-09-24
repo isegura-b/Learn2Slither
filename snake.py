@@ -1,6 +1,8 @@
 from apple import apple_eaten
 import random
 
+import board
+
 snake = []
 direction = "Right"
 
@@ -37,10 +39,7 @@ def move_snake(new_direction, apples):
     new_head = [new_row, new_col]
 
     if (
-        new_head[0] <= 0
-        or new_head[1] <= 0
-        or new_head[0] >= 11
-        or new_head[1] >= 11
+        not board.is_inside(new_head[0], new_head[1])
     ):
         #print("Game Over: wall")
         return (False, 0)
@@ -83,9 +82,11 @@ def reset_snake():
 
     global direction
     snake.clear()
+
+    initial_length = min(3, max(board.width, board.height))
     while True:
-        row = random.randint(1, 10)
-        col = random.randint(1, 10)
+        row = random.randint(1, board.height)
+        col = random.randint(1, board.width)
         directions = [
             "Right",
             "Left",
@@ -96,34 +97,22 @@ def reset_snake():
         direction = random.choice(directions)
         if direction == "Right":
             head = [row, col]
-            body1 = [row, col - 1]
-            body2 = [row, col - 2]
+            body = [[row, col - offset] for offset in range(1, initial_length)]
         elif direction == "Left":
             head = [row, col]
-            body1 = [row, col + 1]
-            body2 = [row, col + 2]
+            body = [[row, col + offset] for offset in range(1, initial_length)]
         elif direction == "Up":
             head = [row, col]
-            body1 = [row + 1, col]
-            body2 = [row + 2, col]
+            body = [[row + offset, col] for offset in range(1, initial_length)]
         elif direction == "Down":
             head = [row, col]
-            body1 = [row - 1, col]
-            body2 = [row - 2, col]
+            body = [[row - offset, col] for offset in range(1, initial_length)]
 
-        valid = True
-
-
-        if ( body1[0] < 1 or body1[0] > 10 or body1[1] < 1 or body1[1] > 10 ):
-            valid = False
-
-        if ( body2[0] < 1 or body2[0] > 10 or body2[1] < 1 or body2[1] > 10 ):
-            valid = False
+        valid = all(board.is_inside(segment[0], segment[1]) for segment in body)
 
         if valid == True:
             snake.append(head)
-            snake.append(body1)
-            snake.append(body2)
+            snake.extend(body)
 
             break
 

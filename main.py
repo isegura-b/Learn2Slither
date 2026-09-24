@@ -1,5 +1,6 @@
 import sys
 
+import board
 from arguments import build_parser
 
 from snake import move_snake
@@ -61,9 +62,6 @@ update_snake_view = None
 update_info = None
 
 apples = []
-apples.append(create_apple("green", snake, apples))
-apples.append(create_apple("green", snake, apples))
-apples.append(create_apple("red", snake, apples))
 
 
 def print_game_over(message="GAME OVER"):
@@ -148,9 +146,10 @@ def reset_game_state():
     last_action = None
     last_reward = None
     apples = []
-    apples.append(create_apple("green", snake, apples))
-    apples.append(create_apple("green", snake, apples))
-    apples.append(create_apple("red", snake, apples))
+    for apple_type in ("green", "green", "red"):
+        apple = create_apple(apple_type, snake, apples)
+        if apple is not None:
+            apples.append(apple)
     return alive, apples
 
 
@@ -415,6 +414,7 @@ def wait_for_visual_step(step_by_step):
 
 
 def run_interactive():
+    reset_game_state()
     initialize_display()
     initialize_board()
     window.bind_all("<Key>", key_pressed)
@@ -427,6 +427,7 @@ def run_cli(args, parser):
     global episodes
     global current_epsilon
 
+    board.configure(args.width, args.height)
     visual = args.visual == "on"
     set_info_mode(
         "CLI Evaluation" if args.dontlearn else "CLI Training",

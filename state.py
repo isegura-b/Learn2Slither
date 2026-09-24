@@ -1,3 +1,6 @@
+import board
+
+
 def get_state(snake, apples):
 
     head = snake[0]
@@ -93,7 +96,7 @@ def get_cell_content(row, col, snake, apples):
             elif apple_type == "red":
                 return "R"
 
-    if row == 0 or row == 11 or col == 0 or col == 11:
+    if board.is_wall(row, col):
         return "W"
     return "0"
 
@@ -108,7 +111,7 @@ def look_up(row, col, snake, apples):
 def look_down(row, col, snake, apples):
     down = row + 1
     look = []
-    while (down <= 11):
+    while (down <= board.height + 1):
         look.append(get_cell_content(down, col, snake, apples))
         down = down + 1
     return look
@@ -125,7 +128,7 @@ def look_left(row, col, snake, apples):
 def look_right(row, col, snake, apples):
     right = col + 1
     look = []
-    while (right <= 11):
+    while (right <= board.width + 1):
         look.append(get_cell_content(row, right, snake, apples))
         right = right + 1
     return look
